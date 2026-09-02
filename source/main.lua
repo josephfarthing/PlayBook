@@ -52,6 +52,16 @@ local FONTS <const> = {
 		name = "Monocraft",
 		font = graphics.font.new("fonts/monocraft-18")
 	},
+	{
+		name = "Literata Regular",
+		font = graphics.font.new("fonts/Literata-Regular")
+		height = 31
+	},
+	{
+		name = "Literata Large",
+		font = graphics.font.new("fonts/Literata-Large")
+		height = 39
+	},
 }
 local MANUAL_NAME <const> = "The PlayBook Manual.txt"
 -- Scene names
