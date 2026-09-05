@@ -523,7 +523,7 @@ loadBook = function(selectedBook)
     if currentFile == nil then return end
     
     if isPDB then
-        local headerChunkSize = 128 * 1024
+        local headerChunkSize = 256 * 1024 -- Massive chunk size for performance
         local headerBuffer = ""
         local separatorIndex = nil
         
@@ -533,11 +533,16 @@ loadBook = function(selectedBook)
             headerBuffer = headerBuffer .. chunk
             separatorIndex = string.find(headerBuffer, "\n%-%-%-PDB%-%-%-\n")
             if separatorIndex then break end
-            if #headerBuffer > 1024 * 1024 then break end
+            if #headerBuffer > 4 * 1024 * 1024 then break end -- Increased to 4MB limit to handle books like Ulysses
         end
         
         if separatorIndex then
             local jsonString = string.sub(headerBuffer, 1, separatorIndex - 1)
+            
+            -- Free the massive raw buffer immediately to protect RAM
+            headerBuffer = nil
+            collectgarbage("collect")
+            
             local metadata = json.decode(jsonString)
             if metadata and metadata.chapters then
                 currentChapters = metadata.chapters
@@ -545,6 +550,10 @@ loadBook = function(selectedBook)
             end
             if metadata and metadata.glossary then currentGlossary = metadata.glossary end
             textStartOffset = separatorIndex + 11 - 1
+            
+            -- Free the decoded JSON string immediately
+            jsonString = nil
+            collectgarbage("collect")
         else
             textStartOffset = 0
         end
@@ -726,15 +735,16 @@ addLines = function(additionalLines, append, startChar)
         
         local h = lineHeight
         local gWords = {}
-        local cx = leftMargin
+        local prefix = ""
         
         for fullWord, space in string.gmatch(line, "(%S+)(%s*)") do
             local cw = string.match(string.lower(fullWord), "[a-z]+")
             if cw and currentGlossary[cw] then
+                local cx = leftMargin + getTextSize(prefix)
                 local wWidth = getTextSize(fullWord)
                 insert(gWords, { fullWord=fullWord, cleanWord=cw, def=currentGlossary[cw], x=cx, w=wWidth })
             end
-            cx = cx + getTextSize(fullWord .. space)
+            prefix = prefix .. fullWord .. space
         end
         
         local lineObj = { text = line, start = start, stop = stop, height = h, glossaryWords = gWords }
@@ -1344,9 +1354,9 @@ local function drawText()
         graphics.drawText(sel.fullWord, sel.x, sel.y)
         graphics.setImageDrawMode(graphics.kDrawModeCopy)
         
-        graphics.setFont(FONTS[5].font)
+        graphics.setFont(graphics.getSystemFont())
         local defText = "*" .. sel.cleanWord .. "*: " .. sel.def
-        local boxW, boxH = 300, 75
+        local boxW, boxH = 360, 130
         local tooltipY = sel.y - boxH - 5
         if tooltipY < 0 then tooltipY = sel.y + sel.h + 5 end 
         local tooltipX = math.max(2, math.min(DEVICE_WIDTH - boxW - 2, sel.x + sel.w/2 - boxW/2))
@@ -1538,7 +1548,7 @@ local function drawLibrary()
     end
     
     if fallingBookProgress < 20000 then
-        fallingBookProgress = fallingBookProgress + 20
+        fallingBookProgress = fallingBookProgress + 60
         forceRedraw = true
     end
 
