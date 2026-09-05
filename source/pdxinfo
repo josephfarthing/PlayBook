@@ -1,7 +1,7 @@
-name=PlayBook
-author=Idrees Hassan
-description=A delightful ebook reader for the Playdate
+name=PlayBook++
+author=Idrees Hassan (fork by Joe Farthing)
+description=A delightful ebook reader for the Playdate with more features
 bundleID=com.idreesinc.playbook
-version=2.0
-buildNumber=7
+version=2.32
+buildNumber=24
 imagePath=images/launcher
