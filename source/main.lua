@@ -17,15 +17,24 @@ local getTextSize <const> = graphics.getTextSize
 -----------------------------------------
 -- CONSTANTS & CONFIG
 -----------------------------------------
+-- The width of the screen in pixels
 local DEVICE_WIDTH <const> = 400
+-- The height of the screen in pixels
 local DEVICE_HEIGHT <const> = 240
+-- The acceleration of the volume while scrolling
 local VOLUME_ACCELERATION <const> = 0.05
+-- The maximum volume of the scrolling noise
 local MAX_VOLUME <const> = 0.025
+-- The speed of scrolling via the crank
 local CRANK_SCROLL_SPEED <const> = 1.2
+-- The speed of scrolling via the D-pad
 local BTN_SCROLL_SPEED <const> = 6
+-- Text chunk window to load into memory above/below the current point
 local CHUNK_SIZE <const> = 64 * 1024
+-- How much space between books when animating the folder menus
 local BOOK_SEPARATION <const> = 42
 
+-- The font options available
 local FONTS <const> = {
     { name = "Roboto Slab", font = graphics.font.new("fonts/roboto-slab-12") },
     { name = "Asheville Ayu", font = graphics.font.new("fonts/asheville/Asheville-Ayu"), height = 20 },
@@ -36,13 +45,16 @@ local FONTS <const> = {
     { name = "Literata Large", font = graphics.font.new("fonts/Literata-Large") },
 }
 
+-- Scene names
 local LIBRARY = "LIBRARY"
 local READER = "READER"
 
+-- Margin options
 local MARGINS_LEFT <const> = {6, 3, 0}
 local MARGINS_NO_BORDER <const> = {6, 3, 0}
 local MARGINS_WITH_BORDER <const> = {22, 19, 16}
 
+-- Books bundled with the app
 local DEFAULT_BOOKS <const> = {
     "Adventures of Sherlock Holmes.txt",
     "Northanger Abbey.txt",
@@ -65,16 +77,26 @@ local POSSIBLE_SUBTITLES <const> = {
 
 -----------------------------------------
 -- GLOBAL STATE
------------------------------------------
+-----------------------------------------]
+-- Whether the screen is inverted
 local inverted = false
+-- The font key of the font to use for the reader
 local readerFontId = 1
+-- The current speed modifier for the crank
 local crankSpeedModifier = 1
+-- Which progress indicator to use (1 = none, 2 = candle)
 local progressIndicator = 2
+-- Whether to show the books included with the app
 local showDefaultBooks = true
+-- Whether hyphenation is enabled - requires a PDB text file prebaked with hyphen characters
 local hyphenationEnabled = true
+-- How big the margins should be at the left and right
 local marginLevel = 1
+-- Which book the user read last - re-opens on start up
 local lastBookKey = nil
+-- Default estimated reading speed in all characters per minute
 local readingSpeed = 1500 
+-- Sets to true after they see the tutorial for the first time
 local tutorialCompleted = false
 
 local booksState = {}
