@@ -14,7 +14,9 @@ local sub <const> = string.sub
 local insert <const> = table.insert
 local getTextSize <const> = graphics.getTextSize
 
--- Constants
+-----------------------------------------
+-- CONSTANTS & CONFIG
+-----------------------------------------
 local DEVICE_WIDTH <const> = 400
 local DEVICE_HEIGHT <const> = 240
 local VOLUME_ACCELERATION <const> = 0.05
@@ -37,27 +39,6 @@ local FONTS <const> = {
 local LIBRARY = "LIBRARY"
 local READER = "READER"
 
--- Loaded from Save State
-local inverted = false
-local readerFontId = 1
-local crankSpeedModifier = 1
-local progressIndicator = 2
-local showDefaultBooks = true
-local hyphenationEnabled = true
-local marginLevel = 1
-local lastBookKey = nil
-local readingSpeed = 1500 
-local tutorialCompleted = false
-
-local booksState = {}
-local globalStats = {
-    timeReadMs = 0,
-    bytesRead = 0,
-    finishedBooks = {},
-    folders = {}
-}
-local benchmarkText = nil
-
 local MARGINS_LEFT <const> = {6, 3, 0}
 local MARGINS_NO_BORDER <const> = {6, 3, 0}
 local MARGINS_WITH_BORDER <const> = {22, 19, 16}
@@ -71,99 +52,6 @@ local DEFAULT_BOOKS <const> = {
     "Ulysses - James Joyce.pdb",
 }
 
--- Shared State
-local scene = LIBRARY
-local currentBookKey = nil
-local currentBookSettings = nil
-local offset = 0
-local playScrollSound = true
-
--- Chunking & File State
-local currentFile = nil
-local textLength = 0
-local textStartOffset = 0
-local textChunk = ""
-local textChunkStart = 1
-local textChunkEnd = 0
-local isPDB = false
-local currentChapters = {}
-local chapterMenuActive = false
-local chapterGridView = nil
-local currentGlossary = {}
-
--- Bookmark State
-local currentBookmarks = {}
-local bookmarkMenuActive = false
-local bookmarkGridView = nil
-local bPressStartTime = 0
-local isHoldingB = false
-local bWasHeld = false
-
--- Navigation State
-local navMenuActive = false
-local navGridView = nil
-local navOptions = {}
-
--- Layout Geometry
-local topLinesHeightOffset = 0
-
--- Skimming State
-local isSkimming = false
-local skimProgress = 0
-
--- Tutorial State
-local tutorialActive = false
-local tutorialStep = 1
-
--- Glossary Selection State
-local selectableWords = {}
-local selectedWordIndex = 1
-
--- Reading Speed Tracker State
-local lastSettleTime = 0
-local lastSettleIndex = 1
-local lastActivityTime = 0
-
--- Library/Folder State
-local masterLibrary = {}
-local availableBooks = {}
-local highlightedBook = 1
-local currentScrollOffset = 0
-local targetScrollOffset = 0
-local FOLDER_IN_PROGRESS = -1
-local FOLDER_ALL_BOOKS = 0
-local currentFolderIndex = 0 
-local visualFolderIndex = 0
-local isKeyboardOpen = false
-local hasScrolledLibrary = false
-
--- Animation State
-local isStartupAnimation = true
-local titleAnimationProgress = 0
-local fallingBookProgress = 0
-local headerYOffset = -40
-
--- Claw Machine State
-local aPressStartTime = 0
-local isHoldingA = false
-local isMovingBook = false
-local floatingBook = nil
-
--- Library Graphics
-local bookImage <const> = graphics.image.new("images/book.png")
-local bookmarkImage <const> = graphics.image.new("images/bookmark.png")
-local bookmarkBorderImage <const> = graphics.image.new("images/bookmark-border.png")
-local titleImage <const> = graphics.image.new("images/title.png")
-
-local tutorialImages = {
-    graphics.image.new("images/tutorial-1.png"),
-    graphics.image.new("images/tutorial-2.png"),
-    graphics.image.new("images/tutorial-3.png"),
-    graphics.image.new("images/tutorial-4.png"),
-    graphics.image.new("images/tutorial-5.png"),
-    graphics.image.new("images/tutorial-6.png")
-}
-
 local POSSIBLE_SUBTITLES <const> = {
     {"Made by Idrees"},
     {"A reader lives a thousand", "lives before he dies"},
@@ -174,26 +62,96 @@ local POSSIBLE_SUBTITLES <const> = {
     {"A book is a dream", "that you hold in your hand"},
     {"A book is a device", "to ignite the imagination"},
 }
-local subtitle = POSSIBLE_SUBTITLES[math.random(#POSSIBLE_SUBTITLES)]
 
--- Reader Variables
-local sound <const> = playdate.sound.synth.new(playdate.sound.kWaveNoise)
-local lineHeight = 0
-local directionHeld = 0
-local leftMargin = 6
-local rightMargin = 22
+-----------------------------------------
+-- GLOBAL STATE
+-----------------------------------------
+local inverted = false
+local readerFontId = 1
+local crankSpeedModifier = 1
+local progressIndicator = 2
+local showDefaultBooks = true
+local hyphenationEnabled = true
+local marginLevel = 1
+local lastBookKey = nil
+local readingSpeed = 1500 
+local tutorialCompleted = false
+
+local booksState = {}
+local globalStats = { timeReadMs = 0, bytesRead = 0, finishedBooks = {}, folders = {} }
+local benchmarkText = nil
+
+local scene = LIBRARY
+local currentBookKey = nil
+local currentBookSettings = nil
+local offset = 0
+local playScrollSound = true
+
+-- Chunking & File State
+local currentFile = nil
+local textLength, textStartOffset = 0, 0
+local textChunk = ""
+local textChunkStart, textChunkEnd = 1, 0
+local isPDB = false
+local currentChapters, currentGlossary = {}, {}
+
+-- UI & Menu State
+local chapterMenuActive, bookmarkMenuActive, navMenuActive = false, false, false
+local chapterGridView, bookmarkGridView, navGridView = nil, nil, nil
+local navOptions = {}
+local currentBookmarks = {}
+local bPressStartTime = 0
+local isHoldingB, bWasHeld = false, false
+
+-- Layout Geometry
+local topLinesHeightOffset = 0
 local lines = {}
 local emptyLinesAbove = 0
-local skipSoundTicks = 0
-local skipScrollTicks = 0
-local previousCrankOffset = 0
-local indexAtTopOfScreen = 1
-local textProgress = 0
+
+-- Skimming & Tracking State
+local isSkimming = false
+local skimProgress = 0
+local selectableWords = {}
+local selectedWordIndex = 1
+local lastSettleTime, lastSettleIndex, lastActivityTime = 0, 1, 0
+
+-- Library/Folder State
+local masterLibrary = {}
+local availableBooks = {}
+local highlightedBook = 1
+local currentScrollOffset, targetScrollOffset = 0, 0
+local FOLDER_IN_PROGRESS, FOLDER_ALL_BOOKS = -1, 0
+local currentFolderIndex, visualFolderIndex = 0, 0
+local isKeyboardOpen, hasScrolledLibrary = false, false
+
+-- Animation & Claw Machine State
+local isStartupAnimation = true
+local titleAnimationProgress, fallingBookProgress = 0, 0
+local headerYOffset = -40
+local aPressStartTime = 0
+local isHoldingA, isMovingBook = false, false
+local floatingBook = nil
+local tutorialActive, tutorialStep = false, 1
+
+-----------------------------------------
+-- GRAPHICS ASSETS
+-----------------------------------------
+local bookImage <const> = graphics.image.new("images/book.png")
+local bookmarkImage <const> = graphics.image.new("images/bookmark.png")
+local bookmarkBorderImage <const> = graphics.image.new("images/bookmark-border.png")
+local titleImage <const> = graphics.image.new("images/title.png")
+local subtitle = POSSIBLE_SUBTITLES[math.random(#POSSIBLE_SUBTITLES)]
+
+-- Reader Graphics
+local sound <const> = playdate.sound.synth.new(playdate.sound.kWaveNoise)
+local lineHeight, directionHeld = 0, 0
+local leftMargin, rightMargin = 6, 22
+local skipSoundTicks, skipScrollTicks, previousCrankOffset = 0, 0, 0
+local indexAtTopOfScreen, textProgress = 1, 0
 local menuActive = false
 local lastOffset = -1000
 local forceRedraw = false
 
--- UI Graphics
 local candleFlameOne = graphics.image.new("images/candle-flame-1.png")
 local candleFlameTwo = graphics.image.new("images/candle-flame-2.png")
 local candleFlameThree = graphics.image.new("images/candle-flame-3.png")
@@ -208,6 +166,15 @@ local scrollbarArrow = graphics.image.new("images/scrollbar-arrow.png")
 local scrollbarButton = graphics.image.new("images/scrollbar-button.png")
 local scrollbarSection = graphics.image.new("images/scrollbar-section.png")
 local scrollbarSlider = graphics.image.new("images/scrollbar-slider.png")
+
+local tutorialImages = {
+    graphics.image.new("images/tutorial-1.png"),
+    graphics.image.new("images/tutorial-2.png"),
+    graphics.image.new("images/tutorial-3.png"),
+    graphics.image.new("images/tutorial-4.png"),
+    graphics.image.new("images/tutorial-5.png"),
+    graphics.image.new("images/tutorial-6.png")
+}
 
 -- Forward Declarations
 local loadBook, loadTextChunk, reloadReader, appendLines, prependLines, addLines, removeLines
@@ -224,7 +191,52 @@ local function easeOut(t)
 end
 
 -----------------------------------------
--- CORE LOGIC
+-- UI & DRAWING HELPERS
+-----------------------------------------
+
+-- Master function for drawing rounded popup boxes (menus, glossaries, pause screen)
+local function drawPanel(x, y, w, h, radius, borderWidth, hasShadow)
+    radius = radius or 8
+    borderWidth = borderWidth or 1
+    
+    if hasShadow then
+        graphics.setColor(graphics.kColorBlack)
+        graphics.fillRoundRect(x + 4, y + 4, w, h, radius)
+    end
+    
+    graphics.setColor(graphics.kColorWhite)
+    graphics.fillRoundRect(x, y, w, h, radius)
+    
+    graphics.setColor(graphics.kColorBlack)
+    graphics.setLineWidth(borderWidth)
+    graphics.drawRoundRect(x, y, w, h, radius)
+    graphics.setLineWidth(1) -- Always reset to default
+end
+
+-- Master function for drawing a selectable list item (chapters, bookmarks)
+local function drawListCell(text, selected, x, y, w, h)
+    if selected then
+        graphics.fillRoundRect(x, y, w, h, 4)
+        graphics.setImageDrawMode(graphics.kDrawModeFillWhite)
+    else
+        graphics.drawRoundRect(x, y, w, h, 4)
+    end
+    
+    local fontHeight = graphics.getSystemFont():getHeight()
+    graphics.setFont(graphics.getSystemFont())
+    graphics.drawTextInRect(text, x + 10, y + (h / 2 - fontHeight / 2) + 2, w - 20, h, nil, "...", kTextAlignment.left)
+    graphics.setImageDrawMode(graphics.kDrawModeCopy)
+end
+
+local function getOrDefault(t, key, expectedType, default)
+    local value = t[key]
+    if value == nil then return default
+    elseif type(value) ~= expectedType then return default
+    else return value end
+end
+
+-----------------------------------------
+-- CORE LOGIC & STATE
 -----------------------------------------
 
 registerActivity = function()
@@ -288,19 +300,11 @@ runBenchmark = function()
     benchmarkText = table.concat(stats, "\n")
 end
 
-local function getOrDefault(t, key, expectedType, default)
-    local value = t[key]
-    if value == nil then return default
-    else
-        if type(value) ~= expectedType then return default end
-        return value
-    end
-end
-
 saveState = function()
     local state = {}
     state.inverted = inverted
-    if currentBookKey ~= nil and currentBookSettings ~= nil then
+    -- Only record progress if we actually have text laid out
+    if scene == READER and currentBookKey ~= nil and currentBookSettings ~= nil and #lines > 0 then
         currentBookSettings.readIndex = indexAtTopOfScreen
         currentBookSettings.progress = textProgress
         currentBookSettings.bookmarks = currentBookmarks
@@ -355,6 +359,9 @@ loadCurrentBookSettings = function()
     currentBookSettings.readIndex = getOrDefault(currentBookSettings, "readIndex", "number", 1)
     currentBookSettings.progress = getOrDefault(currentBookSettings, "progress", "number", 0)
     currentBookmarks = getOrDefault(currentBookSettings, "bookmarks", "table", {})
+    booksState[currentBookKey] = currentBookSettings
+    indexAtTopOfScreen = currentBookSettings.readIndex
+    textProgress = currentBookSettings.progress
 end
 
 -----------------------------------------
@@ -506,11 +513,15 @@ initLibrary = function(skipDropAnimation)
 end
 
 -----------------------------------------
--- TEXT PARSING & BOOK LOADING
+-- TEXT PARSING & FILE LOADING
 -----------------------------------------
 
 loadBook = function(selectedBook)
     if currentFile then currentFile:close() end
+    lines = {}
+    topLinesHeightOffset = 0
+    offset = 0
+    
     currentBookKey = selectedBook.name
     loadCurrentBookSettings()
     
@@ -522,8 +533,9 @@ loadBook = function(selectedBook)
     currentFile = playdate.file.open("books/" .. selectedBook.path)
     if currentFile == nil then return end
     
+    -- Extract JSON Metadata Header from PDB bundles
     if isPDB then
-        local headerChunkSize = 256 * 1024 -- Massive chunk size for performance
+        local headerChunkSize = 256 * 1024
         local headerBuffer = ""
         local separatorIndex = nil
         
@@ -533,13 +545,13 @@ loadBook = function(selectedBook)
             headerBuffer = headerBuffer .. chunk
             separatorIndex = string.find(headerBuffer, "\n%-%-%-PDB%-%-%-\n")
             if separatorIndex then break end
-            if #headerBuffer > 4 * 1024 * 1024 then break end -- Increased to 4MB limit to handle books like Ulysses
+            if #headerBuffer > 4 * 1024 * 1024 then break end 
         end
         
         if separatorIndex then
             local jsonString = string.sub(headerBuffer, 1, separatorIndex - 1)
             
-            -- Free the massive raw buffer immediately to protect RAM
+            -- Free raw buffer to protect Playdate RAM
             headerBuffer = nil
             collectgarbage("collect")
             
@@ -551,7 +563,6 @@ loadBook = function(selectedBook)
             if metadata and metadata.glossary then currentGlossary = metadata.glossary end
             textStartOffset = separatorIndex + 11 - 1
             
-            -- Free the decoded JSON string immediately
             jsonString = nil
             collectgarbage("collect")
         else
@@ -561,6 +572,7 @@ loadBook = function(selectedBook)
         textStartOffset = 0
     end
     
+    -- Calculate actual total read bytes
     currentFile:seek(0, playdate.file.kSeekFromEnd)
     textLength = currentFile:tell() - textStartOffset
     textChunkStart = 1
@@ -593,7 +605,12 @@ loadTextChunk = function(targetIndex)
 end
 
 reloadReader = function()
-    saveState()
+    if scene == READER and currentBookSettings ~= nil and #lines > 0 then
+        currentBookSettings.readIndex = indexAtTopOfScreen
+        currentBookSettings.progress = textProgress
+        booksState[currentBookKey] = currentBookSettings
+    end
+    
     scene = READER
     setupSystemMenu()
     offset = 0
@@ -604,10 +621,9 @@ reloadReader = function()
     skipSoundTicks = 0
     skipScrollTicks = 0
     previousCrankOffset = 0
-    textProgress = 0
     wasMoving = true
     
-    lastSettleIndex = currentBookSettings.readIndex or 1
+    lastSettleIndex = currentBookSettings and currentBookSettings.readIndex or 1
     lastSettleTime = playdate.getCurrentTimeMilliseconds()
 
     sound:setVolume(0)
@@ -620,6 +636,8 @@ reloadReader = function()
     if currentBookSettings ~= nil then
         initializeLines(currentBookSettings.readIndex)
     end
+    
+    saveState()
 end
 
 removeLines = function(numOfLines, fromBottom)
@@ -656,6 +674,12 @@ initializeLines = function(startChar)
     topLinesHeightOffset = 0
 end
 
+-----------------------------------------
+-- THE LAYOUT ENGINE
+-----------------------------------------
+-- Reads bytes from the file chunk, parses UTF-8 boundaries,
+-- detects invisible hyphen markers, builds complete lines, 
+-- and extracts bounding boxes for glossary interactions.
 addLines = function(additionalLines, append, startChar)
     playdate.resetElapsedTime()
     if not currentFile then return 0 end
@@ -665,6 +689,7 @@ addLines = function(additionalLines, append, startChar)
     local numOfLines = initialNumOfLines
     local byteIndex = 1
     
+    -- 1. Determine direction and starting index
     if startChar then byteIndex = startChar
     elseif numOfLines > 0 then
         if append then byteIndex = lines[#lines].stop + 1
@@ -678,6 +703,7 @@ addLines = function(additionalLines, append, startChar)
         return string.byte(textChunk, index - textChunkStart + 1)
     end
     
+    -- UTF-8 Helpers
     local isStartOfChar = function(byte) return byte < 128 or byte >= 192 end
     local isContinuationByte = function(byte) return byte >= 128 and byte < 192 end
     local getCharLength = function(byte)
@@ -705,6 +731,7 @@ addLines = function(additionalLines, append, startChar)
         return true
     end
     
+    -- Align byteIndex precisely to UTF-8 character boundaries
     if append then
         if not isStartOfChar(getChunkByte(byteIndex)) then
             local result = findStartOfChar(byteIndex, 1)
@@ -724,12 +751,12 @@ addLines = function(additionalLines, append, startChar)
     end
     
     local MAX_WIDTH <const> = DEVICE_WIDTH - leftMargin - rightMargin
-    local currentLine = ""
-    local currentLineWidth = 0
-    local lineStart = byteIndex
-    local lineStop = byteIndex
-    local lastSpace, lastSpaceIndex, lastHyphen, lastHyphenIndex, lastHyphenIsSoft = nil, nil, nil, nil, false
+    local currentLine, currentLineWidth = "", 0
+    local lineStart, lineStop = byteIndex, byteIndex
+    local lastSpace, lastSpaceIndex = nil, nil
+    local lastHyphen, lastHyphenIndex, lastHyphenIsSoft = nil, nil, false
     
+    -- 2. Line Committer
     local insertLine = function (line, start, stop, nextLine)
         if nextLine == nil then nextLine = "" end
         
@@ -737,6 +764,7 @@ addLines = function(additionalLines, append, startChar)
         local gWords = {}
         local prefix = ""
         
+        -- Analyze completed line for matching glossary terms to build interaction hitboxes
         for fullWord, space in string.gmatch(line, "(%S+)(%s*)") do
             local cw = string.match(string.lower(fullWord), "[a-z]+")
             if cw and currentGlossary[cw] then
@@ -765,6 +793,7 @@ addLines = function(additionalLines, append, startChar)
             lineStart = lineStop - #nextLine
         end
 
+        -- Inherit wrap boundaries into the next line overflow
         if currentLine ~= "" then
             if append then
                 for i = #currentLine, 1, -1 do
@@ -792,6 +821,7 @@ addLines = function(additionalLines, append, startChar)
         end
     end
     
+    -- 3. Core Text Processing Loop
     local char = ""
     while numOfLines < initialNumOfLines + additionalLines do
         if byteIndex < 1 or byteIndex > textLength then
@@ -809,6 +839,7 @@ addLines = function(additionalLines, append, startChar)
             
             if isCompleteChar(char) then
                 if char == "\194\173" then
+                    -- Detect invisible soft hyphens injected by build_pdb.py
                     if hyphenationEnabled then
                         if append then
                             if getTextSize(currentLine .. "-") <= MAX_WIDTH then
@@ -905,7 +936,7 @@ function toggleBookmark()
 end
 
 -----------------------------------------
--- UI DRAWING & MENUS
+-- MENUS & POPUPS
 -----------------------------------------
 
 local optionViews = {}
@@ -1039,74 +1070,35 @@ initChapterMenu = function()
     chapterGridView:setNumberOfRows(#currentChapters)
     chapterGridView:setNumberOfColumns(1)
     function chapterGridView:drawCell(section, row, column, selected, x, y, width, height)
-        if selected then
-            graphics.fillRoundRect(x, y, width, height, 4)
-            graphics.setImageDrawMode(graphics.kDrawModeFillWhite)
-        else
-            graphics.drawRoundRect(x, y, width, height, 4)
-        end
-        local fontHeight = graphics.getSystemFont():getHeight()
-        graphics.setFont(graphics.getSystemFont())
-        graphics.drawTextInRect(currentChapters[row].title, x + 10, y + (height / 2 - fontHeight / 2) + 2, width - 20, height, nil, "...", kTextAlignment.left)
-        graphics.setImageDrawMode(graphics.kDrawModeCopy)
+        drawListCell(currentChapters[row].title, selected, x, y, width, height)
     end
 end
 
 initBookmarkMenu = function()
     bookmarkGridView = playdate.ui.gridview.new(240, 32)
-    if #currentBookmarks == 0 then
-        bookmarkGridView:setNumberOfRows(1)
-    else
-        bookmarkGridView:setNumberOfRows(#currentBookmarks)
-    end
+    bookmarkGridView:setNumberOfRows(#currentBookmarks == 0 and 1 or #currentBookmarks)
     bookmarkGridView:setNumberOfColumns(1)
-    
     function bookmarkGridView:drawCell(section, row, column, selected, x, y, width, height)
-        if selected then
-            graphics.fillRoundRect(x, y, width, height, 4)
-            graphics.setImageDrawMode(graphics.kDrawModeFillWhite)
-        else
-            graphics.drawRoundRect(x, y, width, height, 4)
-        end
-        
-        local fontHeight = graphics.getSystemFont():getHeight()
-        graphics.setFont(graphics.getSystemFont())
-        
         local text = "No Bookmarks Yet"
         if #currentBookmarks > 0 then
             local bm = currentBookmarks[row]
             local pct = math.floor((bm.index / textLength) * 100) .. "%"
             text = pct .. " - " .. bm.time
         end
-        
-        graphics.drawTextInRect(text, x + 10, y + (height / 2 - fontHeight / 2) + 2, width - 20, height, nil, "...", kTextAlignment.left)
-        graphics.setImageDrawMode(graphics.kDrawModeCopy)
+        drawListCell(text, selected, x, y, width, height)
     end
 end
 
 openNavMenu = function()
     navOptions = {}
-    if isPDB and #currentChapters > 0 then
-        table.insert(navOptions, { label = "Chapters", action = "chapters" })
-    end
+    if isPDB and #currentChapters > 0 then table.insert(navOptions, { label = "Chapters", action = "chapters" }) end
     table.insert(navOptions, { label = "Bookmarks", action = "bookmarks" })
     
     navGridView = playdate.ui.gridview.new(200, 32)
     navGridView:setNumberOfRows(#navOptions)
     navGridView:setNumberOfColumns(1)
-    
     function navGridView:drawCell(section, row, column, selected, x, y, width, height)
-        if selected then
-            graphics.fillRoundRect(x, y, width, height, 4)
-            graphics.setImageDrawMode(graphics.kDrawModeFillWhite)
-        else
-            graphics.drawRoundRect(x, y, width, height, 4)
-        end
-        local text = navOptions[row].label
-        local fontHeight = graphics.getSystemFont():getHeight()
-        graphics.setFont(graphics.getSystemFont())
-        graphics.drawTextInRect(text, x + 10, y + (height / 2 - fontHeight / 2) + 2, width - 20, height, nil, "...", kTextAlignment.left)
-        graphics.setImageDrawMode(graphics.kDrawModeCopy)
+        drawListCell(navOptions[row].label, selected, x, y, width, height)
     end
     
     navMenuActive = true
@@ -1142,7 +1134,11 @@ setupSystemMenu = function()
             end)
         end
     elseif scene == READER then
-        systemMenu:addMenuItem("Library", function() saveState() initLibrary(true) end)
+        systemMenu:addMenuItem("Library", function()
+            saveState()
+            lines = {}
+            initLibrary(true)
+        end)
         systemMenu:addMenuItem("Navigation", function()
             if not menuActive and not chapterMenuActive and not bookmarkMenuActive and not navMenuActive then
                 if isPDB and #currentChapters > 0 then
@@ -1162,6 +1158,10 @@ setupSystemMenu = function()
         end)
     end
 end
+
+-----------------------------------------
+-- RENDER LOOP (READER)
+-----------------------------------------
 
 local function drawCandle()
     local TOP = textProgress * (DEVICE_HEIGHT - candleTop.height - 10 - candleHolder.height) + 4
@@ -1198,15 +1198,11 @@ local function drawScrollbar()
 end
 
 drawSkimOverlay = function()
-    local boxW = 240
-    local boxH = 120
+    local boxW, boxH = 240, 120
     local bx = (DEVICE_WIDTH - boxW) / 2
     local by = (DEVICE_HEIGHT - boxH) / 2
     
-    graphics.setColor(graphics.kColorWhite)
-    graphics.fillRoundRect(bx, by, boxW, boxH, 8)
-    graphics.setColor(graphics.kColorBlack)
-    graphics.drawRoundRect(bx, by, boxW, boxH, 8)
+    drawPanel(bx, by, boxW, boxH, 8)
     
     graphics.setImageDrawMode(graphics.kDrawModeCopy)
     graphics.setFont(graphics.getSystemFont())
@@ -1235,12 +1231,8 @@ drawTutorialOverlay = function()
         local bw, bh = 280, 140
         local bx = (DEVICE_WIDTH - bw) / 2
         local by = (DEVICE_HEIGHT - bh) / 2
-        graphics.setColor(graphics.kColorWhite)
-        graphics.fillRoundRect(bx, by, bw, bh, 8)
-        graphics.setColor(graphics.kColorBlack)
-        graphics.setLineWidth(2)
-        graphics.drawRoundRect(bx, by, bw, bh, 8)
-        graphics.setLineWidth(1)
+        
+        drawPanel(bx, by, bw, bh, 8, 2)
         
         graphics.setImageDrawMode(graphics.kDrawModeCopy)
         graphics.setFont(graphics.getSystemFont())
@@ -1269,8 +1261,26 @@ local function drawText()
     
     if #lines > 0 then
         local drawOffset = floor(offset) + topLinesHeightOffset
-        local currentY = drawOffset
+        
+        -- Master Top Bound Clamp
+        if lines[1].start <= 1 and drawOffset > 0 then
+            offset = -topLinesHeightOffset
+            drawOffset = 0
+        end
+        
+        -- Master Bottom Bound Clamp
         local totalHeight = 0
+        for i = 1, #lines do totalHeight = totalHeight + lines[i].height end
+        
+        if lines[#lines].stop >= textLength then
+            local bottomY = drawOffset + totalHeight
+            if bottomY < DEVICE_HEIGHT and totalHeight >= DEVICE_HEIGHT then
+                offset = DEVICE_HEIGHT - totalHeight - topLinesHeightOffset
+                drawOffset = DEVICE_HEIGHT - totalHeight
+            end
+        end
+
+        local currentY = drawOffset
         local topLineStart, topLineStop = nil, nil
         local topLineY, topLineHeight = 0, 1
         
@@ -1294,15 +1304,20 @@ local function drawText()
                 end
             end
             currentY = currentY + line.height
-            totalHeight = totalHeight + line.height
         end
         
+        -- Track absolute read progress
         if topLineStart ~= nil then
             indexAtTopOfScreen = topLineStart
             local offsetWithinLine = 0
             if topLineY < 0 then offsetWithinLine = -topLineY / topLineHeight end
             local progressWithinLine = (topLineStop - topLineStart) * offsetWithinLine
             textProgress = (topLineStart + progressWithinLine) / textLength
+            
+            if currentBookSettings ~= nil then
+                currentBookSettings.readIndex = indexAtTopOfScreen
+                currentBookSettings.progress = textProgress
+            end
             
             if textProgress > 0.99 and currentBookKey then
                 globalStats.finishedBooks[currentBookKey] = true
@@ -1329,15 +1344,26 @@ local function drawText()
             end
         end
         
+        -- Dynamic Layout Buffer Management
         if drawOffset + 2 * lineHeight > 0 then
             local linesNeeded = ceil((drawOffset + 2 * lineHeight) / lineHeight)
-            removeLines(prependLines(linesNeeded), true)
-            forceRedraw = true
+            local added = prependLines(linesNeeded)
+            if added > 0 then
+                removeLines(added, true)
+                forceRedraw = true
+            end
         end
+        
+        totalHeight = 0
+        for i = 1, #lines do totalHeight = totalHeight + lines[i].height end
+        
         if drawOffset + totalHeight < DEVICE_HEIGHT then
             local linesNeeded = ceil((DEVICE_HEIGHT - (drawOffset + totalHeight)) / lineHeight)
-            removeLines(appendLines(linesNeeded), false)
-            forceRedraw = true
+            local added = appendLines(linesNeeded)
+            if added > 0 then
+                removeLines(added, false)
+                forceRedraw = true
+            end
         end
     end
     
@@ -1361,10 +1387,7 @@ local function drawText()
         if tooltipY < 0 then tooltipY = sel.y + sel.h + 5 end 
         local tooltipX = math.max(2, math.min(DEVICE_WIDTH - boxW - 2, sel.x + sel.w/2 - boxW/2))
         
-        graphics.setColor(graphics.kColorWhite)
-        graphics.fillRoundRect(tooltipX, tooltipY, boxW, boxH, 6)
-        graphics.setColor(graphics.kColorBlack)
-        graphics.drawRoundRect(tooltipX, tooltipY, boxW, boxH, 6)
+        drawPanel(tooltipX, tooltipY, boxW, boxH, 6)
         graphics.drawTextInRect(defText, tooltipX + 8, tooltipY + 8, boxW - 16, boxH - 16)
         
         graphics.setFont(FONTS[readerFontId].font)
@@ -1397,6 +1420,10 @@ local function drawText()
     
     if progressIndicator == 2 then drawCandle() elseif progressIndicator == 3 then drawScrollbar() end
 end
+
+-----------------------------------------
+-- RENDER LOOP (LIBRARY)
+-----------------------------------------
 
 local function drawBookGraphic(x, y, title, progress, selected)
     graphics.setFont(FONTS[1].font)
@@ -1490,12 +1517,7 @@ local function drawLibrary()
             local kw, kh = 200, 60
             local kx, ky = 10, 40
             
-            graphics.setColor(graphics.kColorBlack)
-            graphics.fillRoundRect(kx + 4, ky + 4, kw, kh, 8)
-            graphics.setColor(graphics.kColorWhite)
-            graphics.fillRoundRect(kx, ky, kw, kh, 8)
-            graphics.setColor(graphics.kColorBlack)
-            graphics.drawRoundRect(kx, ky, kw, kh, 8)
+            drawPanel(kx, ky, kw, kh, 8, 1, true)
             
             graphics.setImageDrawMode(graphics.kDrawModeCopy)
             graphics.setFont(graphics.getSystemFont())
@@ -1626,32 +1648,35 @@ local function drawMenu()
 end
 
 drawNavMenu = function()
-    graphics.setColor(graphics.kColorWhite)
-    graphics.fillRoundRect(80, 50, 240, 140, 8)
-    graphics.setColor(graphics.kColorBlack)
-    graphics.drawRoundRect(80, 50, 240, 140, 8)
-    
+    drawPanel(80, 50, 240, 140, 8)
     graphics.setImageDrawMode(graphics.kDrawModeCopy)
     graphics.setFont(graphics.getSystemFont())
     graphics.drawTextAligned("*Navigation*", DEVICE_WIDTH/2, 60, kTextAlignment.center)
-    
     navGridView:drawInRect(100, 85, 200, 95)
 end
 
 local function drawChapterMenu()
-    graphics.setColor(graphics.kColorWhite)
-    graphics.fillRoundRect(30, 20, 340, 200, 8)
-    graphics.setColor(graphics.kColorBlack)
-    graphics.drawRoundRect(30, 20, 340, 200, 8)
+    drawPanel(30, 20, 340, 200, 8)
     chapterGridView:drawInRect(50, 35, 300, 170)
 end
 
 local function drawBookmarkMenu()
-    graphics.setColor(graphics.kColorWhite)
-    graphics.fillRoundRect(30, 20, 340, 200, 8)
-    graphics.setColor(graphics.kColorBlack)
-    graphics.drawRoundRect(30, 20, 340, 200, 8)
+    drawPanel(30, 20, 340, 200, 8)
     bookmarkGridView:drawInRect(50, 35, 300, 170)
+end
+
+drawBenchmarkOverlay = function()
+    if not benchmarkText then return end
+    local boxW, boxH = 280, 140
+    local bx = (DEVICE_WIDTH - boxW) / 2
+    local by = (DEVICE_HEIGHT - boxH) / 2
+    
+    drawPanel(bx, by, boxW, boxH, 8)
+    
+    graphics.setImageDrawMode(graphics.kDrawModeCopy)
+    graphics.setFont(graphics.getSystemFont())
+    graphics.drawTextAligned("*Hardware Benchmark*", DEVICE_WIDTH / 2, by + 15, kTextAlignment.center)
+    graphics.drawTextAligned(benchmarkText, DEVICE_WIDTH / 2, by + 50, kTextAlignment.center)
 end
 
 -----------------------------------------
@@ -1782,6 +1807,10 @@ local function updateLibraryInputs()
     end
 end
 
+-----------------------------------------
+-- PLAYDATE LIFECYCLE CALLBACKS
+-----------------------------------------
+
 function playdate.gameWillPause()
     if scene == READER then
         local menuImg = graphics.getDisplayImage()
@@ -1791,6 +1820,7 @@ function playdate.gameWillPause()
         graphics.setImageDrawMode(graphics.kDrawModeCopy)
         graphics.setFont(graphics.getSystemFont())
         
+        -- Custom word-wrap logic to fit dynamic book titles into the tiny system pause screen bounds
         local rawTitle = currentBookKey or "Unknown Book"
         local maxTitleWidth = 150 
         local titleLines = {}
@@ -1834,9 +1864,7 @@ function playdate.gameWillPause()
         local bx = 16
         local by = DEVICE_HEIGHT / 2 - boxH / 2
         
-        graphics.setColor(graphics.kColorBlack) graphics.fillRoundRect(bx + 4, by + 4, boxW, boxH, 8)
-        graphics.setColor(graphics.kColorWhite) graphics.fillRoundRect(bx, by, boxW, boxH, 8)
-        graphics.setColor(graphics.kColorBlack) graphics.drawRoundRect(bx, by, boxW, boxH, 8)
+        drawPanel(bx, by, boxW, boxH, 8, 1, true)
         
         local currentY = by + 10
         for i=1, #titleLines do
@@ -2120,7 +2148,6 @@ function playdate.BButtonUp()
         if not bWasHeld then
             local pageHeight = math.floor(DEVICE_HEIGHT / lineHeight) * lineHeight
             offset = math.floor((offset + pageHeight) / lineHeight) * lineHeight
-            if offset > 0 and lines[1] and lines[1].start <= 1 then offset = 0 end
             forceRedraw = true
         end
     end
