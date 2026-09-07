@@ -9,15 +9,23 @@ One thing led to another and I ended up with a lot of changes in the code.
 ### Features:
 - Added larger font support, and more accurate line breaking (the original didn't take kerning into account, which is a problem for larger fonts)
 - New navigation buttons - A/B goes page forward/back (like a Kindle), crank and up/down arrows still work, I disabled left/right because I needed the buttons for other things
+	- I added this because constantly scrolling is a pretty good way to get eye strain and burn through battery faster
 - Hold B to bookmark a page
+	- The bookmarks are saved with the time they are created and what % through the book
 - Access chapters bookmarks and settings from the pause menu
+	- Frees up the A/B buttons for page turning
 - Pause menu also has progress info (% and time remaining) for the current book
+	- For a huge book the scroll bar is a bit imprecise, and I usually browse without it to fit as much (big) text on the screen as possible
 - Added folder support (left/right from main screen, hold A to lift a book out of the stack, then left right to move it, and press A again to put it back down)
+	- I imagine the user having a couple of folders of books they want to read on a trip, for example
+	- Folders are capped at 5 total
+	- There is an "in progress" folder to the left of the main screen that only shows books you started reading
 
 ### Quality of life:
 - Menu starts from the first book not the last (A-Z)
 - App re-opens in the last book you read at the place you left it
 - The library menu loads much faster when you have a lot of books on the device
+	- I had to give up on the long scroll of books, it was taking 5 minutes to get to the first book
 
 ### Efficiency:
 - Reduce screen draws and reduce refresh rate to 10hz when idle
