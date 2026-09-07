@@ -1,0 +1,61 @@
+{"chapters": [{"title": "Welcome to PlayBook++", "index": 1}, {"title": "License & Credits", "index": 461}, {"title": "Adding Books & PDB", "index": 811}, {"title": "Managing Your Library", "index": 1649}, {"title": "Reading a Book", "index": 2275}, {"title": "Settings & Navigation", "index": 2847}], "glossary": {"glossary": "A collection of textual glosses or terms; a list of specialized, technical, or archaic words with their definitions.", "navigation": "The act or process of navigating through sections, chapters, or places.", "typography": "The art, style, or general appearance of printed matter and typefaces.", "bookmark": "A marker or record used to identify and preserve one's reading position in a text.", "precision": "The quality, condition, or fact of being exact and accurate.", "skimming": "The act of reading or scrolling quickly through text to obtain a general overview.", "tactile": "Perceptible by touch, tangible, or relating to the sense of physical touch.", "hyphenation": "The division of words across lines using hyphens to maintain even margins and line lengths."}}
+---PDB---
+*WELCOME TO PLAYBOOK++*
+
+Welcome to PlayBook++, an enhanced ebook reader for Panic Playdate.
+
+PlayBook++ builds upon the original PlayBook by Idrees with chapter navigation, a (slightly) richer book format, dictionary support, bookmarks, on-device folders, fast skimming, and simpler instant page flipping.
+
+This manual is itself a .pdb file so you can test all features right here. Hold Right on the D-Pad and turn the crank to inspect words in the glossary!
+
+*LICENSE & CREDITS*
+
+PlayBook++ is free and open-source software licensed under the Mozilla Public License 2.0 (MPL-2.0).
+
+It is based on PlayBook by Idrees (idreesinc.com). Bundled typography and reader fonts are licensed under the SIL Open Font License (OFL). Default classic books are sourced from the public domain archives at Project Gutenberg.
+
+*ADDING BOOKS & CONVERTING EPUB FOR ENHANCED BOOKS*
+
+To add books, connect your Playdate to your computer with a USB cable. Hold D-Pad Left, Lock, and Menu simultaneously for four seconds until the Playdate restarts into USB Data Disk mode.
+
+On your computer, open the mounted PLAYDATE drive and navigate to Data/com.idreesinc.playbook/books/ (or something like that). Drop your .pdb or .txt files directly inside. You can organize them into top-level subfolders if you like.
+
+While plain text files work great, the custom PDB format unlocks chapter navigation, soft hyphenation, and an in-book glossary. Use the included Python tool to convert any standard EPUB file into a .pdb file that adds chapters and lets you optionally use a dictionary to add definitions to rare words. A full dictioary would be too much for the PlayDate’s memory!
+
+*MANAGING YOUR LIBRARY*
+
+The main library screen organizes your books into vertical stacks. Use the crank or Up and Down on the D-Pad to scroll through books. Tap Left or Right on the D-Pad to switch between folder collections: In Progress, All Books, custom folders, and New Folder.
+
+To create a folder on-device, navigate right to New Folder and press [A]. An on-screen keyboard will appear allowing you to name the collection.
+
+To move a book into a folder, highlight it and hold [A] for one second. The book will lift out of the stack! Tap Left or Right on the D-Pad to carry it to your chosen folder, then press [A] to drop it in, or [B] to cancel.
+
+*READING A BOOK*
+
+Open any book by pressing [A].
+
+While reading:
+
+[A] Button: Advance one full page forward.
+
+[B] Button (tap): Flip one full page backward.
+
+[B] Button (hold): Add or remove a bookmark. A folded dog-ear will appear in the top-left corner of the page.
+
+Crank or Up/Down D-Pad: Continuous precision line scrolling.
+
+Hold Left + Turn Crank: Skim through the book. An overlay shows reading percentage, time remaining, and current chapter.
+
+Hold Right + Turn Crank: Interactive dictionary lookup. Underlines words with definitions and opens definition cards.
+
+*SETTINGS & NAVIGATION*
+
+Press the hardware Menu button on the right side of the console while reading to open drawer actions.
+
+Navigation Drawer: Jump directly to any chapter in a PDB book, or view and jump to your saved bookmarks.
+
+Settings Drawer: Configure Theme (Light/Dark), Reader Font (7 font options), Crank Speed, Progress Bar (Candle, Scrollbar, or None), Margins, Hyphenation, or replay the Tutorial at any time.
+
+System Sleep Card: Whenever your Playdate pauses, PlayBook++ shows a reading card showing book title, percentage read, and estimated reading time remaining based on your reading speed.
+
+Happy reading with PlayBook++ on your Playdate!
