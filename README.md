@@ -36,7 +36,7 @@ One thing led to another and I ended up with a lot of changes in the code.
 
 ### Important notes:
 
-I used an LLM to code quite a lot of the modifications, though I have checked the code by hand as much as possible. The pixel art was modified or made directly by my own hand.  I make no ethical claim to be a developer of this app, as Lua is a language I only vaguely know and all the credit for this project goes to Idrees. I made the modifications entirely so that I could enjoy books on my Playdate and I'm happy if it helps someone else.
+I used an LLM to code quite a lot of the modifications, though I have checked the code by hand as much as possible. The pixel art was modified or made directly by my own hand without any AI.  I make no ethical claim to be a developer of this app, as Lua is a language I only vaguely know and all the credit for this project goes to Idrees. I made the modifications entirely so that I could enjoy books on my Playdate and I'm happy if it helps someone else.
 
 If you enjoy this fork, I strongly encourage you to purchase the original PlayBook app on the Catalogue or otherwise support the original developer.
 
