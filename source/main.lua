@@ -11,6 +11,7 @@ local abs <const> = math.abs
 local floor <const> = math.floor
 local ceil <const> = math.ceil
 local sub <const> = string.sub
+local gsub <const> = string.gsub
 local insert <const> = table.insert
 local getTextSize <const> = graphics.getTextSize
 
@@ -77,14 +78,14 @@ local POSSIBLE_SUBTITLES <const> = {
 
 -----------------------------------------
 -- GLOBAL STATE
------------------------------------------]
+-----------------------------------------
 -- Whether the screen is inverted
 local inverted = false
 -- The font key of the font to use for the reader
 local readerFontId = 1
 -- The current speed modifier for the crank
 local crankSpeedModifier = 1
--- Which progress indicator to use (1 = none, 2 = candle)
+-- Which progress indicator to use (1 = none, 2 = candle, 3 = scrollbar)
 local progressIndicator = 2
 -- Whether to show the books included with the app
 local showDefaultBooks = true
@@ -136,6 +137,7 @@ local skimProgress = 0
 local selectableWords = {}
 local selectedWordIndex = 1
 local lastSettleTime, lastSettleIndex, lastActivityTime = 0, 1, 0
+local wasMoving = false
 
 -- Library/Folder State
 local masterLibrary = {}
@@ -541,6 +543,11 @@ end
 loadBook = function(selectedBook)
     if currentFile then currentFile:close() end
     lines = {}
+    currentChapters = {}
+    currentGlossary = {}
+    textChunk = ""
+    collectgarbage("collect") -- Clear previous book's glossary from RAM first
+    
     topLinesHeightOffset = 0
     offset = 0
     
@@ -549,46 +556,58 @@ loadBook = function(selectedBook)
     
     local ext = string.lower(sub(selectedBook.path, -4))
     isPDB = (ext == ".pdb")
-    currentChapters = {}
-    currentGlossary = {}
     
     currentFile = playdate.file.open("books/" .. selectedBook.path)
     if currentFile == nil then return end
     
-    -- Extract JSON Metadata Header from PDB bundles
+    -- Extract JSON Metadata Header from PDB bundles using table chunks to prevent RAM spikes
     if isPDB then
-        local headerChunkSize = 256 * 1024
-        local headerBuffer = ""
+        local headerChunkSize = 128 * 1024
+        local chunks = {}
+        local totalRead = 0
         local separatorIndex = nil
         
-        while true do
+        while totalRead < 4 * 1024 * 1024 do
             local chunk = currentFile:read(headerChunkSize)
             if not chunk then break end
-            headerBuffer = headerBuffer .. chunk
-            separatorIndex = string.find(headerBuffer, "\n%-%-%-PDB%-%-%-\n")
-            if separatorIndex then break end
-            if #headerBuffer > 4 * 1024 * 1024 then break end 
+            insert(chunks, chunk)
+            totalRead = totalRead + #chunk
+            
+            local searchStr = (#chunks > 1) and (sub(chunks[#chunks - 1], -16) .. chunk) or chunk
+            if string.find(searchStr, "\n%-%-%-PDB%-%-%-\n") then
+                break
+            end
         end
         
+        local headerBuffer = table.concat(chunks)
+        chunks = nil
+        separatorIndex = string.find(headerBuffer, "\n%-%-%-PDB%-%-%-\n")
+        
         if separatorIndex then
-            local jsonString = string.sub(headerBuffer, 1, separatorIndex - 1)
+            local jsonString = sub(headerBuffer, 1, separatorIndex - 1)
             
             -- Free raw buffer to protect Playdate RAM
             headerBuffer = nil
             collectgarbage("collect")
             
             local metadata = json.decode(jsonString)
-            if metadata and metadata.chapters then
-                currentChapters = metadata.chapters
-                initChapterMenu()
-            end
-            if metadata and metadata.glossary then currentGlossary = metadata.glossary end
-            textStartOffset = separatorIndex + 11 - 1
-            
             jsonString = nil
             collectgarbage("collect")
+            
+            if metadata then
+                if metadata.chapters then
+                    currentChapters = metadata.chapters
+                    initChapterMenu()
+                end
+                if metadata.glossary then currentGlossary = metadata.glossary end
+                metadata = nil
+            end
+            textStartOffset = separatorIndex + 10
+            collectgarbage("collect")
         else
+            headerBuffer = nil
             textStartOffset = 0
+            collectgarbage("collect")
         end
     else
         textStartOffset = 0
@@ -788,13 +807,14 @@ addLines = function(additionalLines, append, startChar)
         
         -- Analyze completed line for matching glossary terms to build interaction hitboxes
         for fullWord, space in string.gmatch(line, "(%S+)(%s*)") do
-            local cw = string.match(string.lower(fullWord), "[a-z]+")
+            local strippedWord = gsub(fullWord, "\194\173", "")
+            local cw = string.match(string.lower(strippedWord), "[a-z]+")
             if cw and currentGlossary[cw] then
                 local cx = leftMargin + getTextSize(prefix)
-                local wWidth = getTextSize(fullWord)
-                insert(gWords, { fullWord=fullWord, cleanWord=cw, def=currentGlossary[cw], x=cx, w=wWidth })
+                local wWidth = getTextSize(strippedWord)
+                insert(gWords, { fullWord=strippedWord, cleanWord=cw, def=currentGlossary[cw], x=cx, w=wWidth })
             end
-            prefix = prefix .. fullWord .. space
+            prefix = prefix .. strippedWord .. space
         end
         
         local lineObj = { text = line, start = start, stop = stop, height = h, glossaryWords = gWords }
@@ -985,7 +1005,7 @@ buildMenuOptions = function()
             initialValue = function ()
                 if crankSpeedModifier == 0.75 then return 1
                 elseif crankSpeedModifier == 1 then return 2
-                elseif crankSpeedModifier == 1.25 then return 3
+                elseif crankSpeedModifier == 1.5 then return 3
                 else return 2 end
             end,
             callback = function (index)
@@ -1278,8 +1298,8 @@ local function drawText()
     graphics.clear(graphics.kColorWhite)
     graphics.setFont(FONTS[readerFontId].font)
     
-    selectableWords = {}
     local isGlossaryMode = playdate.buttonIsPressed(playdate.kButtonRight) and not isSkimming and not menuActive and not chapterMenuActive and not bookmarkMenuActive and not navMenuActive and not tutorialActive
+    if isGlossaryMode then selectableWords = {} end
     
     if #lines > 0 then
         local drawOffset = floor(offset) + topLinesHeightOffset
@@ -1965,26 +1985,6 @@ function playdate.update()
             offset = offset + directionHeld * BTN_SCROLL_SPEED
             local vol = min(abs(playdate.getCrankChange() * VOLUME_ACCELERATION * MAX_VOLUME), MAX_VOLUME)
             if skipSoundTicks > 0 then skipSoundTicks = skipSoundTicks - 1 else sound:setVolume(vol) end
-            
-            local isMoving = (offset ~= lastOffset) or forceRedraw
-            if isMoving and not wasMoving then
-                local timeSpentMs = playdate.getCurrentTimeMilliseconds() - lastSettleTime
-                local bytesRead = indexAtTopOfScreen - lastSettleIndex
-                
-                if bytesRead > 20 and timeSpentMs > 2000 and timeSpentMs < 300000 and not tutorialActive then
-                    local wpm = (bytesDiff / 6) / (timeDiff / 60000.0)
-                    if wpm > 50 and wpm < 1000 then
-                        globalStats.timeReadMs = (globalStats.timeReadMs or 0) + timeSpentMs
-                        globalStats.bytesRead = (globalStats.bytesRead or 0) + bytesRead
-                        local currentSpeed = bytesRead / (timeSpentMs / 60000.0)
-                        readingSpeed = math.floor((readingSpeed * 0.8) + (currentSpeed * 0.2))
-                    end
-                end
-            elseif not isMoving and wasMoving then
-                lastSettleTime = playdate.getCurrentTimeMilliseconds()
-                lastSettleIndex = indexAtTopOfScreen
-            end
-            wasMoving = isMoving
         end
         
         if offset ~= lastOffset or forceRedraw or isSkimming or tutorialActive then
@@ -2187,7 +2187,7 @@ local function init()
     graphics.setBackgroundColor(graphics.kColorWhite)
     setInverted(inverted)
     
-    initLibrary(false, true) 
+    initLibrary(false) 
 
     if scene == LIBRARY and lastBookKey ~= nil then
         for i = 1, #masterLibrary do
